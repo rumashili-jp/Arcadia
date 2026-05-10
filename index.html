@@ -339,6 +339,12 @@
                                 戻る
                             </button>
                         </div>
+
+                        <div class="mt-8 pt-6 border-t border-red-100">
+                            <button onclick="deleteNode()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl transition flex items-center justify-center border border-red-200">
+                                <i class="fa-solid fa-trash-can mr-2"></i>このノードを完全に削除
+                            </button>
+                        </div>
                     </div>
                 </div>
             </aside>
@@ -767,6 +773,30 @@
             document.body.removeChild(link);
             
             showNotification(`${worldName}のロアブックを出力しました`);
+        }
+
+        function deleteNode() {
+            if (!currentEditingNodeId) return;
+            
+            const nodeToDelete = nodesData.find(n => n.id === currentEditingNodeId);
+            const nodeName = nodeToDelete ? nodeToDelete.title : "ノード";
+
+            // ノードを削除
+            nodesData = nodesData.filter(n => n.id !== currentEditingNodeId);
+
+            // 関連する関係線を削除 (sourceまたはtargetが削除対象IDのものを除外)
+            linksData = linksData.filter(l => {
+                const sId = typeof l.source === 'string' ? l.source : l.source.id;
+                const tId = typeof l.target === 'string' ? l.target : l.target.id;
+                return sId !== currentEditingNodeId && tId !== currentEditingNodeId;
+            });
+
+            // UIの更新
+            closeInfoPanel();
+            updateGraph();
+            showNotification(`「${nodeName}」と関連する関係線を削除しました`);
+            
+            currentEditingNodeId = null;
         }
 
         window.onload = () => updateGraph();
