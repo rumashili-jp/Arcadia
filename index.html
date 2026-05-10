@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>World Builder Prototype</title>
+    <title>Arcadia   World Builder Prototype</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -68,6 +68,8 @@
             height: 100vh;
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         #graph-svg {
@@ -99,7 +101,7 @@
             stroke-opacity: 0.6;
             stroke-width: 2px;
             transition: stroke-opacity 0.2s;
-            fill: none; /* 直線から曲線(path)に変更するため追加 */
+            fill: none;
         }
         .link-label {
             font-size: 10px;
@@ -136,6 +138,12 @@
         }
         .lore-card:hover { transform: translateY(-2px); }
         
+        #view-lore {
+            -webkit-overflow-scrolling: touch; /* iOSでのスムーズなスクロールを有効化 */
+            touch-action: pan-y;               /* 垂直方向のパンを明示的に許可 */
+            overscroll-behavior-y: contain;    /* 親要素へのスクロール伝播を防止 */
+        }
+
         .lore-relation-link {
             color: #2563eb;
             cursor: pointer;
@@ -168,6 +176,16 @@
             70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
+
+        /* Top Header for World Name */
+        #top-header {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            z-index: 30;
+        }
     </style>
 </head>
 <body class="flex">
@@ -189,7 +207,7 @@
             <i class="fa-solid fa-table-list"></i>
         </div>
         <div class="mt-auto">
-            <div class="tool-btn" title="エクスポート">
+            <div class="tool-btn" onclick="exportLorebookText()" title="ロアブックをtxtで書き出す">
                 <i class="fa-solid fa-download"></i>
             </div>
             <div class="tool-btn" title="インポート">
@@ -199,117 +217,126 @@
     </nav>
 
     <main id="workspace">
-        <!-- Graph View -->
-        <div id="view-graph" class="h-full w-full block">
-            <svg id="graph-svg"></svg>
+        <header id="top-header">
+            <div class="flex items-center space-x-3 w-full max-w-xl">
+                <label for="world-name-input" class="text-xs font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">World Name:</label>
+                <input type="text" id="world-name-input" class="bg-slate-50 border-none rounded-lg px-3 py-1.5 text-sm font-bold text-slate-700 w-full focus:ring-2 focus:ring-blue-100 outline-none" placeholder="世界の名称を入力...">
+            </div>
+        </header>
+
+        <div class="flex-grow relative">
+            <!-- Graph View -->
+            <div id="view-graph" class="h-full w-full block">
+                <svg id="graph-svg"></svg>
+                
+                <!-- Floating Buttons -->
+                <div class="absolute bottom-8 right-8 flex flex-col space-y-4">
+                    <button id="btn-link-mode" onclick="toggleLinkMode()" class="bg-slate-700 hover:bg-slate-800 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl transition-all" title="関係を繋ぐモード">
+                        <i class="fa-solid fa-link text-xl"></i>
+                    </button>
+                    <button onclick="showAddNodeModal()" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl transition-all transform hover:scale-110" title="ノードを追加">
+                        <i class="fa-solid fa-plus text-2xl"></i>
+                    </button>
+                </div>
+
+                <!-- Mode Notification -->
+                <div id="link-mode-toast" class="absolute top-6 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-full shadow-2xl opacity-0 transition-opacity pointer-events-none font-bold z-50">
+                    <i class="fa-solid fa-link-slash mr-2"></i>関係線モード：2つのノードをクリックしてください
+                </div>
+            </div>
             
-            <!-- Floating Buttons -->
-            <div class="absolute bottom-8 right-8 flex flex-col space-y-4">
-                <button id="btn-link-mode" onclick="toggleLinkMode()" class="bg-slate-700 hover:bg-slate-800 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl transition-all" title="関係を繋ぐモード">
-                    <i class="fa-solid fa-link text-xl"></i>
-                </button>
-                <button onclick="showAddNodeModal()" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl transition-all transform hover:scale-110" title="ノードを追加">
-                    <i class="fa-solid fa-plus text-2xl"></i>
-                </button>
-            </div>
-
-            <!-- Mode Notification -->
-            <div id="link-mode-toast" class="absolute top-6 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-full shadow-2xl opacity-0 transition-opacity pointer-events-none font-bold z-50">
-                <i class="fa-solid fa-link-slash mr-2"></i>関係線モード：2つのノードをクリックしてください
-            </div>
-        </div>
-        
-        <!-- Lorebook View -->
-        <div id="view-lore" class="hidden h-full w-full bg-slate-50 overflow-y-auto">
-            <div class="max-w-4xl mx-auto py-12 px-6 pb-24">
-                <div class="flex items-center justify-between mb-8 border-b-2 border-slate-200 pb-4">
-                    <h2 class="text-4xl font-black text-slate-800">Lorebook</h2>
-                    <div class="text-slate-400 text-sm">世界設定辞書</div>
-                </div>
-                <div id="lorebook-content" class="space-y-6">
-                    <!-- Dynamic Content -->
-                </div>
-            </div>
-        </div>
-        
-        <!-- Placeholder Views -->
-        <div id="view-map" class="hidden h-full w-full flex items-center justify-center bg-slate-100">
-            <div class="text-center text-slate-400">
-                <i class="fa-solid fa-map text-6xl mb-4"></i>
-                <p class="text-xl">地図表示機能は開発中です</p>
-            </div>
-        </div>
-        <div id="view-timeline" class="hidden h-full w-full flex items-center justify-center bg-slate-100">
-            <div class="text-center text-slate-400">
-                <i class="fa-solid fa-table-list text-6xl mb-4"></i>
-                <p class="text-xl">年表機能は開発中です</p>
-            </div>
-        </div>
-
-        <!-- Right Info Panel -->
-        <aside id="info-panel">
-            <div class="p-6 h-full flex flex-col">
-                <button onclick="closeInfoPanel()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-
-                <!-- View Mode -->
-                <div id="info-content">
-                    <div id="info-type-badge" class="inline-block px-3 py-1 rounded-full text-xs font-bold text-white mb-2">TYPE</div>
-                    <h3 id="info-title" class="text-2xl font-bold text-slate-800 mb-4">タイトル</h3>
-                    
-                    <div class="mb-6">
-                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">説明</label>
-                        <p id="info-desc" class="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">説明がここに表示されます。</p>
+            <!-- Lorebook View -->
+            <div id="view-lore" class="hidden h-full w-full bg-slate-50 overflow-y-auto">
+                <div class="max-w-4xl mx-auto py-12 px-6 pb-24">
+                    <div class="flex items-center justify-between mb-8 border-b-2 border-slate-200 pb-4">
+                        <h2 class="text-4xl font-black text-slate-800">Lorebook</h2>
+                        <div class="text-slate-400 text-sm">世界設定辞書</div>
                     </div>
-
-                    <div class="mb-6">
-                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">タグ</label>
-                        <div id="info-tags" class="flex flex-wrap gap-2"></div>
-                    </div>
-
-                    <div class="flex-grow">
-                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">関係性</label>
-                        <ul id="info-relations" class="space-y-2"></ul>
-                    </div>
-
-                    <div class="mt-8 border-t pt-6">
-                        <button onclick="openEditMode()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition flex items-center justify-center">
-                            <i class="fa-solid fa-pen-to-square mr-2"></i>設定を編集する
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Edit Mode -->
-                <div id="info-edit" class="hidden">
-                    <h3 class="text-xl font-bold mb-6 text-slate-800 border-b pb-2">ノードの編集</h3>
-                    
-                    <div class="mb-4">
-                        <label class="block text-sm font-bold text-slate-700 mb-1">名称</label>
-                        <input type="text" id="edit-node-title" class="edit-input">
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label class="block text-sm font-bold text-slate-700 mb-1">詳細設定</label>
-                        <textarea id="edit-node-desc" class="edit-textarea" rows="5"></textarea>
-                    </div>
-
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold text-slate-700 mb-1">タグ (カンマ区切り)</label>
-                        <input type="text" id="edit-node-tags" class="edit-input" placeholder="勇者, 王国, 伝説">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="saveNodeEdit()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">
-                            保存
-                        </button>
-                        <button onclick="cancelEditMode()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition">
-                            戻る
-                        </button>
+                    <div id="lorebook-content" class="space-y-6">
+                        <!-- Dynamic Content -->
                     </div>
                 </div>
             </div>
-        </aside>
+            
+            <!-- Placeholder Views -->
+            <div id="view-map" class="hidden h-full w-full flex items-center justify-center bg-slate-100">
+                <div class="text-center text-slate-400">
+                    <i class="fa-solid fa-map text-6xl mb-4"></i>
+                    <p class="text-xl">地図表示機能は開発中です</p>
+                </div>
+            </div>
+            <div id="view-timeline" class="hidden h-full w-full flex items-center justify-center bg-slate-100">
+                <div class="text-center text-slate-400">
+                    <i class="fa-solid fa-table-list text-6xl mb-4"></i>
+                    <p class="text-xl">年表機能は開発中です</p>
+                </div>
+            </div>
+
+            <!-- Right Info Panel -->
+            <aside id="info-panel">
+                <div class="p-6 h-full flex flex-col">
+                    <button onclick="closeInfoPanel()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+
+                    <!-- View Mode -->
+                    <div id="info-content">
+                        <div id="info-type-badge" class="inline-block px-3 py-1 rounded-full text-xs font-bold text-white mb-2">TYPE</div>
+                        <h3 id="info-title" class="text-2xl font-bold text-slate-800 mb-4">タイトル</h3>
+                        
+                        <div class="mb-6">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">説明</label>
+                            <p id="info-desc" class="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">説明がここに表示されます。</p>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">タグ</label>
+                            <div id="info-tags" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <div class="flex-grow">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">関係性</label>
+                            <ul id="info-relations" class="space-y-2"></ul>
+                        </div>
+
+                        <div class="mt-8 border-t pt-6">
+                            <button onclick="openEditMode()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition flex items-center justify-center">
+                                <i class="fa-solid fa-pen-to-square mr-2"></i>設定を編集する
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Edit Mode -->
+                    <div id="info-edit" class="hidden">
+                        <h3 class="text-xl font-bold mb-6 text-slate-800 border-b pb-2">ノードの編集</h3>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-bold text-slate-700 mb-1">名称</label>
+                            <input type="text" id="edit-node-title" class="edit-input">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-bold text-slate-700 mb-1">詳細設定</label>
+                            <textarea id="edit-node-desc" class="edit-textarea" rows="5"></textarea>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-sm font-bold text-slate-700 mb-1">タグ (カンマ区切り)</label>
+                            <input type="text" id="edit-node-tags" class="edit-input" placeholder="勇者, 王国, 伝説">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="saveNodeEdit()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">
+                                保存
+                            </button>
+                            <button onclick="cancelEditMode()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition">
+                                戻る
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
     </main>
 
     <!-- Modals -->
@@ -394,7 +421,7 @@
         const simulation = d3.forceSimulation()
             .force("link", d3.forceLink().id(d => d.id).distance(150))
             .force("charge", d3.forceManyBody().strength(-500))
-            .force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2))
+            .force("center", d3.forceCenter(window.innerWidth / 2, (window.innerHeight - 50) / 2))
             .force("collision", d3.forceCollide().radius(60));
 
         function updateGraph() {
@@ -406,7 +433,6 @@
             link.exit().remove();
             
             const linkEnter = link.enter().append("g").attr("class", "link-group");
-            // 直線の代わりにpathを使用することで曲線を表現可能にする
             linkEnter.append("path").attr("class", "link-line");
             linkEnter.append("text").attr("class", "link-label").attr("text-anchor", "middle");
 
@@ -454,16 +480,17 @@
                         const dy = d.target.y - d.source.y;
                         const dr = Math.sqrt(dx * dx + dy * dy);
                         
-                        // 双方向の関係があるかチェック
-                        const isBidirectional = linksData.some(l => 
-                            (l.source.id === d.target.id && l.target.id === d.source.id)
-                        );
+                        const isBidirectional = linksData.some(l => {
+                            const s = typeof l.source === 'string' ? l.source : l.source.id;
+                            const t = typeof l.target === 'string' ? l.target : l.target.id;
+                            const d_s = typeof d.source === 'string' ? d.source : d.source.id;
+                            const d_t = typeof d.target === 'string' ? d.target : d.target.id;
+                            return s === d_t && t === d_s;
+                        });
 
                         if (isBidirectional) {
-                            // 双方向の場合は弧を描く（drを半径にする）
                             return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
                         } else {
-                            // 単方向の場合は直線
                             return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
                         }
                     });
@@ -474,20 +501,21 @@
                         const dy = d.target.y - d.source.y;
                         const dr = Math.sqrt(dx * dx + dy * dy);
                         
-                        const isBidirectional = linksData.some(l => 
-                            (l.source.id === d.target.id && l.target.id === d.source.id)
-                        );
+                        const isBidirectional = linksData.some(l => {
+                            const s = typeof l.source === 'string' ? l.source : l.source.id;
+                            const t = typeof l.target === 'string' ? l.target : l.target.id;
+                            const d_s = typeof d.source === 'string' ? d.source : d.source.id;
+                            const d_t = typeof d.target === 'string' ? d.target : d.target.id;
+                            return s === d_t && t === d_s;
+                        });
 
                         if (isBidirectional) {
-                            // 曲線上の中心点（大まかな計算）をラベルの位置にする
                             const midX = (d.source.x + d.target.x) / 2;
                             const midY = (d.source.y + d.target.y) / 2;
-                            // 垂直ベクトルで少し外側にオフセット
                             const offsetX = (dy / dr) * 20; 
                             const offsetY = (-dx / dr) * 20;
                             return `translate(${midX + offsetX}, ${midY + offsetY})`;
                         } else {
-                            // 直線の中央
                             return `translate(${(d.source.x + d.target.x) / 2}, ${(d.source.y + d.target.y) / 2 - 10})`;
                         }
                     })
@@ -520,12 +548,17 @@
 
             const relsContainer = document.getElementById('info-relations');
             relsContainer.innerHTML = '';
-            const rels = linksData.filter(l => l.source.id === d.id || l.target.id === d.id);
+            const rels = linksData.filter(l => {
+                const s = typeof l.source === 'string' ? l.source : l.source.id;
+                const t = typeof l.target === 'string' ? l.target : l.target.id;
+                return s === d.id || t === d.id;
+            });
             
             if (rels.length > 0) {
                 rels.forEach(r => {
-                    const isSrc = r.source.id === d.id;
-                    const other = isSrc ? r.target : r.source;
+                    const sId = typeof r.source === 'string' ? r.source : r.source.id;
+                    const isSrc = sId === d.id;
+                    const other = isSrc ? (typeof r.target === 'string' ? nodesData.find(n => n.id === r.target) : r.target) : (typeof r.source === 'string' ? nodesData.find(n => n.id === r.source) : r.source);
                     const li = document.createElement('li');
                     li.className = 'text-sm bg-blue-50 p-2 rounded-lg flex items-center justify-between';
                     li.innerHTML = `<span>${r.relation}</span><span class="font-bold text-blue-600 cursor-pointer" onclick="jumpToNode('${other.id}')">${other.title}</span>`;
@@ -611,7 +644,6 @@
             const trgId = modal.dataset.trg;
             const rel = document.getElementById('link-relation').value || "関係";
             
-            // 同一ソースからターゲットへの既存リンクがあるか探す
             const existingLink = linksData.find(l => {
                 const s = typeof l.source === 'string' ? l.source : l.source.id;
                 const t = typeof l.target === 'string' ? l.target : l.target.id;
@@ -619,11 +651,9 @@
             });
 
             if (existingLink) {
-                // 上書き
                 existingLink.relation = rel;
                 showNotification(`「${rel}」に関係を更新しました`);
             } else {
-                // 新規作成
                 linksData.push({ source: srcId, target: trgId, relation: rel });
                 showNotification("関係を作成しました");
             }
@@ -637,7 +667,8 @@
         document.querySelectorAll('.tool-btn[data-target]').forEach(btn => {
             btn.onclick = () => {
                 const target = btn.getAttribute('data-target');
-                document.querySelectorAll('#workspace > div').forEach(v => v.id === 'info-panel' ? null : v.classList.add('hidden'));
+                // 修正：親コンテナを隠すのではなく、view-から始まるIDを持つ各画面要素のみを隠すように変更
+                document.querySelectorAll('div[id^="view-"]').forEach(v => v.classList.add('hidden'));
                 document.getElementById(target).classList.remove('hidden');
                 
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
@@ -655,10 +686,17 @@
                 card.className = 'lore-card';
                 card.id = `lore-item-${node.id}`;
                 
-                const rels = linksData.filter(l => l.source.id === node.id || l.target.id === node.id);
+                const rels = linksData.filter(l => {
+                    const sId = typeof l.source === 'string' ? l.source : l.source.id;
+                    const tId = typeof l.target === 'string' ? l.target : l.target.id;
+                    return sId === node.id || tId === node.id;
+                });
+
                 let relHtml = '';
                 rels.forEach(r => {
-                    const other = r.source.id === node.id ? r.target : r.source;
+                    const sId = typeof r.source === 'string' ? r.source : r.source.id;
+                    const isSrc = sId === node.id;
+                    const other = isSrc ? (typeof r.target === 'string' ? nodesData.find(n => n.id === r.target) : r.target) : (typeof r.source === 'string' ? nodesData.find(n => n.id === r.source) : r.source);
                     relHtml += `<span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold mr-2 mb-2 inline-block cursor-pointer" onclick="scrollToLore('${other.id}')">${r.relation}: ${other.title}</span>`;
                 });
 
@@ -702,6 +740,27 @@
             updateGraph();
             hideAddNodeModal();
             showNotification(`「${name}」を追加しました`);
+        }
+
+        // New function to export lorebook as TXT
+        function exportLorebookText() {
+            const worldName = document.getElementById('world-name-input').value || "無名世界";
+            let content = `=== 世界設定ロアブック: ${worldName} ===\n\n`;
+
+            nodesData.forEach(node => {
+                content += `=== ${node.title} ===\n`;
+                content += `${node.description || "説明なし"}\n\n`;
+            });
+
+            const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `${worldName}_ロアブック.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification(`${worldName}のロアブックを出力しました`);
         }
 
         window.onload = () => updateGraph();
