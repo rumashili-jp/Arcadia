@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arcadia   World Builder Prototype</title>
+    <title>World Builder Prototype</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -139,9 +139,15 @@
         .lore-card:hover { transform: translateY(-2px); }
         
         #view-lore {
-            -webkit-overflow-scrolling: touch; /* iOSでのスムーズなスクロールを有効化 */
-            touch-action: pan-y;               /* 垂直方向のパンを明示的に許可 */
-            overscroll-behavior-y: contain;    /* 親要素へのスクロール伝播を防止 */
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch; /* iOSでの慣性スクロール */
+            touch-action: auto;               /* 標準のタッチ操作（スクロール）を許可 */
+            background-color: #f8fafc;
         }
 
         .lore-relation-link {
