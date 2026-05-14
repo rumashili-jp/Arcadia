@@ -32,17 +32,17 @@
             width: var(--sidebar-width);
             background-color: #1e293b;
             height: 100vh;
-            height: 100dvh; /* Use dynamic viewport height for iPad/mobile */
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 1rem 0;
             z-index: 50;
             overflow-y: auto;
-            scrollbar-width: none; /* Firefox */
+            scrollbar-width: none;
         }
         #sidebar::-webkit-scrollbar {
-            display: none; /* Chrome, Safari, Opera */
+            display: none;
         }
 
         .tool-btn {
@@ -74,7 +74,7 @@
         #workspace {
             flex-grow: 1;
             height: 100vh;
-            height: 100dvh; /* Match sidebar height */
+            height: 100dvh;
             position: relative;
             overflow: hidden;
             display: flex;
@@ -160,8 +160,8 @@
             right: 0;
             bottom: 0;
             overflow-y: auto !important;
-            -webkit-overflow-scrolling: touch; /* iOSでの慣性スクロール */
-            touch-action: auto;               /* 標準のタッチ操作（スクロール）を許可 */
+            -webkit-overflow-scrolling: touch;
+            touch-action: auto;
             background-color: #f8fafc;
         }
 
@@ -198,7 +198,6 @@
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
-        /* Top Header for World Name */
         #top-header {
             background: white;
             border-bottom: 1px solid #e2e8f0;
@@ -228,12 +227,13 @@
             <i class="fa-solid fa-table-list"></i>
         </div>
         <div class="mt-auto">
-            <div class="tool-btn" onclick="exportLorebookText()" title="ロアブックをtxtで書き出す">
+            <div class="tool-btn" onclick="exportWorldData()" title="世界設定を保存 (JSONエクスポート)">
                 <i class="fa-solid fa-download"></i>
             </div>
-            <div class="tool-btn" title="インポート">
+            <div class="tool-btn" onclick="document.getElementById('import-file').click()" title="世界設定を読み込む (JSONインポート)">
                 <i class="fa-solid fa-upload"></i>
             </div>
+            <input type="file" id="import-file" style="display:none" accept=".json" onchange="importWorldData(event)">
         </div>
     </nav>
 
@@ -246,11 +246,8 @@
         </header>
 
         <div class="flex-grow relative">
-            <!-- Graph View -->
             <div id="view-graph" class="h-full w-full block">
                 <svg id="graph-svg"></svg>
-                
-                <!-- Floating Buttons -->
                 <div class="absolute bottom-8 right-8 flex flex-col space-y-4">
                     <button id="btn-link-mode" onclick="toggleLinkMode()" class="bg-slate-700 hover:bg-slate-800 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl transition-all" title="関係を繋ぐモード">
                         <i class="fa-solid fa-link text-xl"></i>
@@ -259,27 +256,26 @@
                         <i class="fa-solid fa-plus text-2xl"></i>
                     </button>
                 </div>
-
-                <!-- Mode Notification -->
                 <div id="link-mode-toast" class="absolute top-6 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-full shadow-2xl opacity-0 transition-opacity pointer-events-none font-bold z-50">
                     <i class="fa-solid fa-link-slash mr-2"></i>関係線モード：2つのノードをクリックしてください
                 </div>
             </div>
             
-            <!-- Lorebook View -->
             <div id="view-lore" class="hidden h-full w-full bg-slate-50 overflow-y-auto">
                 <div class="max-w-4xl mx-auto py-12 px-6 pb-24">
                     <div class="flex items-center justify-between mb-8 border-b-2 border-slate-200 pb-4">
-                        <h2 class="text-4xl font-black text-slate-800">Lorebook</h2>
-                        <div class="text-slate-400 text-sm">世界設定辞書</div>
+                        <div>
+                            <h2 class="text-4xl font-black text-slate-800">Lorebook</h2>
+                            <div class="text-slate-400 text-sm">世界設定辞書</div>
+                        </div>
+                        <button onclick="exportLorebookText()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg transition flex items-center">
+                            <i class="fa-solid fa-file-lines mr-2"></i>TXTで出力
+                        </button>
                     </div>
-                    <div id="lorebook-content" class="space-y-6">
-                        <!-- Dynamic Content -->
-                    </div>
+                    <div id="lorebook-content" class="space-y-6"></div>
                 </div>
             </div>
             
-            <!-- Placeholder Views -->
             <div id="view-map" class="hidden h-full w-full flex items-center justify-center bg-slate-100">
                 <div class="text-center text-slate-400">
                     <i class="fa-solid fa-map text-6xl mb-4"></i>
@@ -293,68 +289,50 @@
                 </div>
             </div>
 
-            <!-- Right Info Panel -->
             <aside id="info-panel">
                 <div class="p-6 h-full flex flex-col">
                     <button onclick="closeInfoPanel()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
                         <i class="fa-solid fa-xmark text-xl"></i>
                     </button>
-
-                    <!-- View Mode -->
                     <div id="info-content">
                         <div id="info-type-badge" class="inline-block px-3 py-1 rounded-full text-xs font-bold text-white mb-2">TYPE</div>
                         <h3 id="info-title" class="text-2xl font-bold text-slate-800 mb-4">タイトル</h3>
-                        
                         <div class="mb-6">
                             <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">説明</label>
                             <p id="info-desc" class="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">説明がここに表示されます。</p>
                         </div>
-
                         <div class="mb-6">
                             <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">タグ</label>
                             <div id="info-tags" class="flex flex-wrap gap-2"></div>
                         </div>
-
                         <div class="flex-grow">
                             <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">関係性</label>
                             <ul id="info-relations" class="space-y-2"></ul>
                         </div>
-
                         <div class="mt-8 border-t pt-6">
                             <button onclick="openEditMode()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition flex items-center justify-center">
                                 <i class="fa-solid fa-pen-to-square mr-2"></i>設定を編集する
                             </button>
                         </div>
                     </div>
-
-                    <!-- Edit Mode -->
                     <div id="info-edit" class="hidden">
                         <h3 class="text-xl font-bold mb-6 text-slate-800 border-b pb-2">ノードの編集</h3>
-                        
                         <div class="mb-4">
                             <label class="block text-sm font-bold text-slate-700 mb-1">名称</label>
                             <input type="text" id="edit-node-title" class="edit-input">
                         </div>
-                        
                         <div class="mb-4">
                             <label class="block text-sm font-bold text-slate-700 mb-1">詳細設定</label>
                             <textarea id="edit-node-desc" class="edit-textarea" rows="5"></textarea>
                         </div>
-
                         <div class="mb-6">
                             <label class="block text-sm font-bold text-slate-700 mb-1">タグ (カンマ区切り)</label>
                             <input type="text" id="edit-node-tags" class="edit-input" placeholder="勇者, 王国, 伝説">
                         </div>
-
                         <div class="grid grid-cols-2 gap-3">
-                            <button onclick="saveNodeEdit()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">
-                                保存
-                            </button>
-                            <button onclick="cancelEditMode()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition">
-                                戻る
-                            </button>
+                            <button onclick="saveNodeEdit()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">保存</button>
+                            <button onclick="cancelEditMode()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition">戻る</button>
                         </div>
-
                         <div class="mt-8 pt-6 border-t border-red-100">
                             <button onclick="deleteNode()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl transition flex items-center justify-center border border-red-200">
                                 <i class="fa-solid fa-trash-can mr-2"></i>このノードを完全に削除
@@ -366,7 +344,6 @@
         </div>
     </main>
 
-    <!-- Modals -->
     <div id="modal-add-node" class="fixed inset-0 bg-slate-900/60 hidden z-[100] flex justify-center items-center backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-8 w-[400px] shadow-2xl">
             <h3 class="text-2xl font-bold mb-6">新規ノード作成</h3>
@@ -411,7 +388,6 @@
         </div>
     </div>
 
-    <!-- Toast Notification -->
     <div id="notification" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl opacity-0 transition-opacity z-[200]">メッセージ</div>
 
     <script>
@@ -453,8 +429,8 @@
 
         function updateGraph() {
             const link = linkLayer.selectAll(".link-group").data(linksData, d => {
-                const s = typeof d.source === 'string' ? d.source : d.source.id;
-                const t = typeof d.target === 'string' ? d.target : d.target.id;
+                const s = typeof d.source === 'object' ? d.source.id : d.source;
+                const t = typeof d.target === 'object' ? d.target.id : d.target;
                 return `${s}-${t}`;
             });
             link.exit().remove();
@@ -503,15 +479,18 @@
             simulation.on("tick", () => {
                 mergedLinks.select("path")
                     .attr("d", d => {
+                        // 座標計算。d.source や d.target がまだオブジェクトでない（文字列のまま）場合は座標を計算できない。
+                        if (typeof d.source !== 'object' || typeof d.target !== 'object') return "";
+
                         const dx = d.target.x - d.source.x;
                         const dy = d.target.y - d.source.y;
                         const dr = Math.sqrt(dx * dx + dy * dy);
                         
                         const isBidirectional = linksData.some(l => {
-                            const s = typeof l.source === 'string' ? l.source : l.source.id;
-                            const t = typeof l.target === 'string' ? l.target : l.target.id;
-                            const d_s = typeof d.source === 'string' ? d.source : d.source.id;
-                            const d_t = typeof d.target === 'string' ? d.target : d.target.id;
+                            const s = typeof l.source === 'object' ? l.source.id : l.source;
+                            const t = typeof l.target === 'object' ? l.target.id : l.target;
+                            const d_s = d.source.id;
+                            const d_t = d.target.id;
                             return s === d_t && t === d_s;
                         });
 
@@ -524,15 +503,17 @@
 
                 mergedLinks.select("text")
                     .attr("transform", d => {
+                        if (typeof d.source !== 'object' || typeof d.target !== 'object') return "";
+
                         const dx = d.target.x - d.source.x;
                         const dy = d.target.y - d.source.y;
                         const dr = Math.sqrt(dx * dx + dy * dy);
                         
                         const isBidirectional = linksData.some(l => {
-                            const s = typeof l.source === 'string' ? l.source : l.source.id;
-                            const t = typeof l.target === 'string' ? l.target : l.target.id;
-                            const d_s = typeof d.source === 'string' ? d.source : d.source.id;
-                            const d_t = typeof d.target === 'string' ? d.target : d.target.id;
+                            const s = typeof l.source === 'object' ? l.source.id : l.source;
+                            const t = typeof l.target === 'object' ? l.target.id : l.target;
+                            const d_s = d.source.id;
+                            const d_t = d.target.id;
                             return s === d_t && t === d_s;
                         });
 
@@ -555,15 +536,12 @@
         function showNodeInfo(d) {
             currentEditingNodeId = d.id;
             cancelEditMode();
-            
             const panel = document.getElementById('info-panel');
             document.getElementById('info-title').innerText = d.title;
             document.getElementById('info-desc').innerText = d.description || "説明はありません。";
-            
             const badge = document.getElementById('info-type-badge');
             badge.innerText = d.type.toUpperCase();
             badge.style.backgroundColor = colorMap[d.type];
-
             const tagsContainer = document.getElementById('info-tags');
             tagsContainer.innerHTML = '';
             (d.tags || []).forEach(tag => {
@@ -572,29 +550,28 @@
                 span.innerText = tag;
                 tagsContainer.appendChild(span);
             });
-
             const relsContainer = document.getElementById('info-relations');
             relsContainer.innerHTML = '';
             const rels = linksData.filter(l => {
-                const s = typeof l.source === 'string' ? l.source : l.source.id;
-                const t = typeof l.target === 'string' ? l.target : l.target.id;
+                const s = typeof l.source === 'object' ? l.source.id : l.source;
+                const t = typeof l.target === 'object' ? l.target.id : l.target;
                 return s === d.id || t === d.id;
             });
-            
             if (rels.length > 0) {
                 rels.forEach(r => {
-                    const sId = typeof r.source === 'string' ? r.source : r.source.id;
-                    const isSrc = sId === d.id;
-                    const other = isSrc ? (typeof r.target === 'string' ? nodesData.find(n => n.id === r.target) : r.target) : (typeof r.source === 'string' ? nodesData.find(n => n.id === r.source) : r.source);
-                    const li = document.createElement('li');
-                    li.className = 'text-sm bg-blue-50 p-2 rounded-lg flex items-center justify-between';
-                    li.innerHTML = `<span>${r.relation}</span><span class="font-bold text-blue-600 cursor-pointer" onclick="jumpToNode('${other.id}')">${other.title}</span>`;
-                    relsContainer.appendChild(li);
+                    const sId = typeof r.source === 'object' ? r.source.id : r.source;
+                    const otherId = sId === d.id ? (typeof r.target === 'object' ? r.target.id : r.target) : sId;
+                    const other = nodesData.find(n => n.id === otherId);
+                    if (other) {
+                        const li = document.createElement('li');
+                        li.className = 'text-sm bg-blue-50 p-2 rounded-lg flex items-center justify-between';
+                        li.innerHTML = `<span>${r.relation}</span><span class="font-bold text-blue-600 cursor-pointer" onclick="jumpToNode('${other.id}')">${other.title}</span>`;
+                        relsContainer.appendChild(li);
+                    }
                 });
             } else {
                 relsContainer.innerHTML = '<li class="text-slate-400 text-xs italic">関係性はまだありません</li>';
             }
-
             panel.classList.add('open');
         }
 
@@ -612,7 +589,6 @@
             document.getElementById('edit-node-title').value = node.title;
             document.getElementById('edit-node-desc').value = node.description || "";
             document.getElementById('edit-node-tags').value = (node.tags || []).join(', ');
-            
             document.getElementById('info-content').classList.add('hidden');
             document.getElementById('info-edit').classList.remove('hidden');
         }
@@ -627,7 +603,6 @@
             node.title = document.getElementById('edit-node-title').value;
             node.description = document.getElementById('edit-node-desc').value;
             node.tags = document.getElementById('edit-node-tags').value.split(',').map(s => s.trim()).filter(s => s);
-            
             updateGraph();
             showNodeInfo(node);
             showNotification("保存しました");
@@ -638,7 +613,6 @@
             linkSourceNode = null;
             const btn = document.getElementById('btn-link-mode');
             const toast = document.getElementById('link-mode-toast');
-            
             if (isLinkMode) {
                 btn.classList.add('mode-btn-active');
                 toast.classList.remove('opacity-0');
@@ -654,7 +628,6 @@
                 showNotification(`${d.title} を選択。次に繋ぐノードを選択してください。`);
             } else {
                 if (linkSourceNode.id === d.id) return;
-                
                 document.getElementById('link-src').innerText = linkSourceNode.title;
                 document.getElementById('link-trg').innerText = d.title;
                 const modal = document.getElementById('modal-add-link');
@@ -670,13 +643,11 @@
             const srcId = modal.dataset.src;
             const trgId = modal.dataset.trg;
             const rel = document.getElementById('link-relation').value || "関係";
-            
             const existingLink = linksData.find(l => {
-                const s = typeof l.source === 'string' ? l.source : l.source.id;
-                const t = typeof l.target === 'string' ? l.target : l.target.id;
+                const s = typeof l.source === 'object' ? l.source.id : l.source;
+                const t = typeof l.target === 'object' ? l.target.id : l.target;
                 return s === srcId && t === trgId;
             });
-
             if (existingLink) {
                 existingLink.relation = rel;
                 showNotification(`「${rel}」に関係を更新しました`);
@@ -684,7 +655,6 @@
                 linksData.push({ source: srcId, target: trgId, relation: rel });
                 showNotification("関係を作成しました");
             }
-            
             updateGraph();
             closeLinkModal();
         }
@@ -694,13 +664,10 @@
         document.querySelectorAll('.tool-btn[data-target]').forEach(btn => {
             btn.onclick = () => {
                 const target = btn.getAttribute('data-target');
-                // 修正：親コンテナを隠すのではなく、view-から始まるIDを持つ各画面要素のみを隠すように変更
                 document.querySelectorAll('div[id^="view-"]').forEach(v => v.classList.add('hidden'));
                 document.getElementById(target).classList.remove('hidden');
-                
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-
                 if (target === 'view-lore') renderLorebook();
             };
         });
@@ -712,21 +679,20 @@
                 const card = document.createElement('div');
                 card.className = 'lore-card';
                 card.id = `lore-item-${node.id}`;
-                
                 const rels = linksData.filter(l => {
-                    const sId = typeof l.source === 'string' ? l.source : l.source.id;
-                    const tId = typeof l.target === 'string' ? l.target : l.target.id;
+                    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+                    const tId = typeof l.target === 'object' ? l.target.id : l.target;
                     return sId === node.id || tId === node.id;
                 });
-
                 let relHtml = '';
                 rels.forEach(r => {
-                    const sId = typeof r.source === 'string' ? r.source : r.source.id;
-                    const isSrc = sId === node.id;
-                    const other = isSrc ? (typeof r.target === 'string' ? nodesData.find(n => n.id === r.target) : r.target) : (typeof r.source === 'string' ? nodesData.find(n => n.id === r.source) : r.source);
-                    relHtml += `<span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold mr-2 mb-2 inline-block cursor-pointer" onclick="scrollToLore('${other.id}')">${r.relation}: ${other.title}</span>`;
+                    const sId = typeof r.source === 'object' ? r.source.id : r.source;
+                    const otherId = sId === node.id ? (typeof r.target === 'object' ? r.target.id : r.target) : sId;
+                    const other = nodesData.find(n => n.id === otherId);
+                    if (other) {
+                        relHtml += `<span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold mr-2 mb-2 inline-block cursor-pointer" onclick="scrollToLore('${other.id}')">${r.relation}: ${other.title}</span>`;
+                    }
                 });
-
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-4">
                         <h4 class="text-2xl font-bold text-slate-800">${node.title}</h4>
@@ -761,7 +727,6 @@
             const name = document.getElementById('new-node-name').value;
             const type = document.getElementById('new-node-type').value;
             if (!name) return;
-            
             const newNode = { id: Date.now().toString(), title: name, type: type, description: "", tags: [] };
             nodesData.push(newNode);
             updateGraph();
@@ -769,16 +734,13 @@
             showNotification(`「${name}」を追加しました`);
         }
 
-        // New function to export lorebook as TXT
         function exportLorebookText() {
             const worldName = document.getElementById('world-name-input').value || "無名世界";
             let content = `=== 世界設定ロアブック: ${worldName} ===\n\n`;
-
             nodesData.forEach(node => {
                 content += `=== ${node.title} ===\n`;
                 content += `${node.description || "説明なし"}\n\n`;
             });
-
             const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
@@ -786,36 +748,99 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
             showNotification(`${worldName}のロアブックを出力しました`);
         }
 
         function deleteNode() {
             if (!currentEditingNodeId) return;
-            
             const nodeToDelete = nodesData.find(n => n.id === currentEditingNodeId);
             const nodeName = nodeToDelete ? nodeToDelete.title : "ノード";
-
-            // ノードを削除
             nodesData = nodesData.filter(n => n.id !== currentEditingNodeId);
-
-            // 関連する関係線を削除 (sourceまたはtargetが削除対象IDのものを除外)
             linksData = linksData.filter(l => {
-                const sId = typeof l.source === 'string' ? l.source : l.source.id;
-                const tId = typeof l.target === 'string' ? l.target : l.target.id;
+                const sId = typeof l.source === 'object' ? l.source.id : l.source;
+                const tId = typeof l.target === 'object' ? l.target.id : l.target;
                 return sId !== currentEditingNodeId && tId !== currentEditingNodeId;
             });
-
-            // UIの更新
             closeInfoPanel();
             updateGraph();
             showNotification(`「${nodeName}」と関連する関係線を削除しました`);
-            
             currentEditingNodeId = null;
         }
 
-        window.onload = () => updateGraph();
+        function exportWorldData() {
+            const worldName = document.getElementById('world-name-input').value || "無名世界";
+            const cleanLinks = linksData.map(l => ({
+                source: typeof l.source === 'object' ? l.source.id : l.source,
+                target: typeof l.target === 'object' ? l.target.id : l.target,
+                relation: l.relation
+            }));
+            const data = {
+                worldName: document.getElementById('world-name-input').value,
+                nodes: nodesData.map(n => ({ ...n, x: n.x, y: n.y, fx: n.fx, fy: n.fy })), // 位置を保存
+                links: cleanLinks
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `${worldName}_設定データ.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showNotification(`${worldName}の設定データを保存しました`);
+        }
 
+        function importWorldData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.nodes && data.links) {
+                        // 1. データのセット
+                        nodesData = data.nodes;
+                        // 重要: インポート時のリンクデータはID文字列であることを保証する
+                        linksData = data.links.map(l => ({
+                            source: typeof l.source === 'object' ? l.source.id : l.source,
+                            target: typeof l.target === 'object' ? l.target.id : l.target,
+                            relation: l.relation
+                        }));
+                        
+                        if (data.worldName !== undefined) {
+                            document.getElementById('world-name-input').value = data.worldName;
+                        }
+                        
+                        closeInfoPanel();
+
+                        // 2. シミュレーションのリセットとデータ再構築
+                        simulation.stop();
+                        simulation.nodes(nodesData);
+                        // ここで一度linkForceを更新し、D3内部で文字列IDをオブジェクト参照に解決させる
+                        simulation.force("link").links(linksData);
+                        
+                        // 3. グラフの物理的更新
+                        updateGraph();
+                        
+                        // 4. 強制的に再起動
+                        simulation.alpha(1).restart();
+                        
+                        // ロアブック表示中の場合は再描画
+                        if (!document.getElementById('view-lore').classList.contains('hidden')) {
+                            renderLorebook();
+                        }
+                        
+                        showNotification("設定データを読み込みました！");
+                    }
+                } catch (error) {
+                    console.error(error);
+                    showNotification("ファイルの読み込みに失敗しちゃった");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        window.onload = () => updateGraph();
     </script>
 </body>
 </html>
